@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#17120f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="One Line">
+  <title>One Line Studio</title>
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="logo" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div>
+        <p class="eyebrow">Solve screenshots · create puzzles</p>
+        <h1>One Line Studio</h1>
+        <p class="sub">Solve a real level from a screenshot or generate a reproducible, independently verified puzzle of your own.</p>
+      </div>
+    </header>
+
+    <nav class="mode-tabs" aria-label="One Line tools">
+      <button class="mode-tab active" type="button" data-panel="solverPanel" aria-selected="true">Solver</button>
+      <button class="mode-tab" type="button" data-panel="generatorPanel" aria-selected="false">Generator</button>
+    </nav>
+
+    <section class="tab-panel" id="solverPanel">
+      <section class="card uploader" id="uploadCard">
+        <div class="section-intro">
+          <p class="eyebrow">Screenshot → solved</p>
+          <h2>One Line Solver</h2>
+          <p>Upload a level screenshot. Detection, solving, validation, and route drawing all happen automatically.</p>
+        </div>
+        <label class="pick" for="screenshotInput">
+          <span class="pick-icon">＋</span>
+          <span>
+            <strong>Choose screenshot</strong>
+            <small>PNG or JPEG · up to {{ max_upload_mb }} MB</small>
+          </span>
+        </label>
+        <input id="screenshotInput" type="file" accept="image/png,image/jpeg" hidden>
+
+        <div class="preview-wrap hidden" id="previewWrap">
+          <img id="previewImage" alt="Selected One Line screenshot preview">
+          <button class="ghost small" id="changeButton" type="button">Change</button>
+        </div>
+
+        <button class="primary" id="solveButton" type="button" disabled>
+          <span id="solveButtonText">Solve level</span>
+          <span class="spinner hidden" id="spinner" aria-hidden="true"></span>
+        </button>
+
+        <details class="advanced">
+          <summary>Manual fallback</summary>
+          <p>If automatic detection ever fails, paste the board matrix from the debug output. Use <code>1</code> for a tile, <code>0</code> for a hole, and optionally <code>S</code> for the start.</p>
+          <textarea id="matrixInput" rows="6" placeholder="S 1 1&#10;1 1 1&#10;0 1 1"></textarea>
+          <label class="field-label" for="startInput">Start override <span>(optional)</span></label>
+          <input id="startInput" type="text" inputmode="numeric" placeholder="2,4" autocomplete="off">
+        </details>
+      </section>
+
+      <section class="card status hidden" id="statusCard" aria-live="polite">
+        <div class="status-icon" id="statusIcon">✓</div>
+        <div>
+          <strong id="statusTitle">Solved</strong>
+          <p id="statusText"></p>
+        </div>
+      </section>
+
+      <section class="card result hidden" id="resultCard">
+        <div class="result-head">
+          <div>
+            <p class="eyebrow">Validated solution</p>
+            <h2 id="resultTitle">Route ready</h2>
+          </div>
+          <span class="pill" id="confidencePill"></span>
+        </div>
+
+        <img id="solutionImage" class="solution-image" alt="Solved One Line screenshot">
+        <div class="metrics" id="metrics"></div>
+        <div class="actions">
+          <button class="primary" id="shareButton" type="button">Share solution</button>
+          <button class="secondary" id="openButton" type="button">Open image</button>
+        </div>
+
+        <details class="route-details">
+          <summary>Route details</summary>
+          <p class="route" id="routeText"></p>
+          <p class="mono" id="asciiRoute"></p>
+        </details>
+
+        <details class="route-details hidden" id="debugDetails">
+          <summary>Detection debug view</summary>
+          <img id="debugImage" class="solution-image" alt="Detected grid debug view">
+        </details>
+      </section>
+    </section>
+
+    <section class="tab-panel hidden" id="generatorPanel">
+      <section class="card generator-controls">
+        <div class="section-intro">
+          <p class="eyebrow">Settings → unique level</p>
+          <h2>One Line Generator</h2>
+          <p>Every returned board is solved, exactly uniqueness-checked from its start, and independently validated.</p>
+        </div>
+
+        <div class="control-group">
+          <div class="control-heading">
+            <span>Dimensions</span>
+            <strong id="dimensionSummary">8 × 8</strong>
+          </div>
+          <div class="dimension-control" data-dimension="width">
+            <label for="widthRange">Width</label>
+            <button class="stepper" type="button" data-step="-1" aria-label="Decrease width">−</button>
+            <input id="widthRange" type="range" min="3" max="20" value="8">
+            <button class="stepper" type="button" data-step="1" aria-label="Increase width">＋</button>
+            <output id="widthValue" for="widthRange">8</output>
+          </div>
+          <div class="dimension-control" data-dimension="height">
+            <label for="heightRange">Height</label>
+            <button class="stepper" type="button" data-step="-1" aria-label="Decrease height">−</button>
+            <input id="heightRange" type="range" min="3" max="20" value="8">
+            <button class="stepper" type="button" data-step="1" aria-label="Increase height">＋</button>
+            <output id="heightValue" for="heightRange">8</output>
+          </div>
+        </div>
+
+        <fieldset class="control-group">
+          <legend>Difficulty</legend>
+          <div class="choice-strip five" id="difficultyChoices">
+            <button type="button" data-value="easy" aria-pressed="false">Easy</button>
+            <button type="button" data-value="medium" aria-pressed="true" class="selected">Medium</button>
+            <button type="button" data-value="hard" aria-pressed="false">Hard</button>
+            <button type="button" data-value="expert" aria-pressed="false">Expert</button>
+            <button type="button" data-value="evil" aria-pressed="false">Evil</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="control-group">
+          <legend>Shape</legend>
+          <div class="choice-strip" id="shapeChoices">
+            <button type="button" data-value="normal" aria-pressed="true" class="selected">
+              <strong>Normal</strong><small>Polished, coherent shapes</small>
+            </button>
+            <button type="button" data-value="extreme" aria-pressed="false">
+              <strong>Extreme</strong><small>Cavities, corridors, odd topology</small>
+            </button>
+          </div>
+        </fieldset>
+
+        <div class="control-group">
+          <label class="control-heading" for="seedInput">
+            <span>Seed</span><small>Optional · same settings reproduce the same puzzle</small>
+          </label>
+          <div class="seed-row">
+            <input id="seedInput" type="text" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Automatic random seed">
+            <button class="secondary compact" id="randomSeedButton" type="button">Random</button>
+          </div>
+        </div>
+
+        <fieldset class="control-group outputs-group">
+          <legend>Outputs <small>Choose any combination</small></legend>
+          <label class="switch-row"><span><strong>Visual Grid</strong><small>Responsive board in the browser</small></span><input id="visualOutput" type="checkbox" checked><i aria-hidden="true"></i></label>
+          <label class="switch-row"><span><strong>Polished PNG</strong><small>Unsolved and solution downloads</small></span><input id="pngOutput" type="checkbox" checked><i aria-hidden="true"></i></label>
+          <label class="switch-row"><span><strong>Binary Matrix</strong><small>Copyable zero-based board data</small></span><input id="matrixOutput" type="checkbox" checked><i aria-hidden="true"></i></label>
+          <p class="inline-error hidden" id="outputError">At least one output must stay enabled.</p>
+        </fieldset>
+
+        <button class="primary generate-button" id="generateButton" type="button">
+          <span id="generateButtonText">Generate level</span>
+          <span class="spinner hidden" id="generateSpinner" aria-hidden="true"></span>
+        </button>
+      </section>
+
+      <section class="card generation-progress hidden" id="generationProgress" aria-live="polite">
+        <div class="progress-head">
+          <div>
+            <p class="eyebrow" id="progressEyebrow">Generating Medium 8×8…</p>
+            <h2 id="progressTitle">Initializing</h2>
+          </div>
+          <strong id="progressPercent">0%</strong>
+        </div>
+        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack"><span id="progressBar"></span></div>
+        <p class="progress-message" id="progressMessage">Preparing deterministic settings…</p>
+        <div class="progress-stats">
+          <span>Attempt <strong id="progressAttempt">0</strong></span>
+          <span>Best <strong id="progressBest">—</strong></span>
+          <span>Target <strong id="progressTarget">120–239</strong></span>
+          <span>Elapsed <strong id="progressElapsed">0.0 s</strong></span>
+        </div>
+        <button class="secondary cancel-button" id="cancelGenerationButton" type="button">Cancel generation</button>
+      </section>
+
+      <section class="card status error hidden" id="generatorError" aria-live="assertive">
+        <div class="status-icon">!</div>
+        <div class="grow">
+          <strong id="generatorErrorTitle">Generation failed</strong>
+          <p id="generatorErrorText"></p>
+          <button class="secondary compact retry-button" id="retryGenerationButton" type="button">Try again</button>
+        </div>
+      </section>
+
+      <section class="card result hidden" id="generatorResult">
+        <div class="result-head">
+          <div>
+            <p class="eyebrow">Verified generated level</p>
+            <h2 id="generatedTier">Medium — 180 / 600</h2>
+          </div>
+          <span class="pill">Unique ✓</span>
+        </div>
+
+        <div class="metrics generated-metrics" id="generatedMetrics"></div>
+
+        <div class="seed-result">
+          <span>Seed</span>
+          <code id="generatedSeed"></code>
+          <button class="ghost small" id="copySeedButton" type="button">Copy</button>
+        </div>
+
+        <section class="output-block hidden" id="visualGridBlock">
+          <div class="output-heading"><h3>Visual Grid</h3><span>Start tile highlighted</span></div>
+          <div class="grid-preview" id="visualGrid"></div>
+        </section>
+
+        <section class="output-block hidden" id="pngBlock">
+          <div class="output-heading"><h3>Polished PNG</h3><span>Unsolved level</span></div>
+          <img id="generatedPng" class="solution-image" alt="Generated One Line puzzle PNG">
+          <div class="actions">
+            <a class="primary button-link" id="downloadPng" download="unsolved_level.png">Download PNG</a>
+            <a class="secondary button-link" id="openPng" target="_blank" rel="noopener">Open image</a>
+          </div>
+        </section>
+
+        <section class="output-block hidden" id="matrixBlock">
+          <div class="output-heading"><h3>Binary Matrix</h3><button class="ghost small" id="copyMatrixButton" type="button">Copy</button></div>
+          <pre class="matrix-output" id="generatedMatrix"></pre>
+          <p class="coordinate-note">1 = tile · 0 = missing · start = <code id="matrixStart"></code> · zero-based (row, column)</p>
+        </section>
+
+        <section class="output-block solution-reveal">
+          <button class="secondary reveal-button" id="revealSolutionButton" type="button">Reveal solution</button>
+          <div class="hidden" id="revealedSolution">
+            <div class="output-heading"><h3>Solution</h3><span>START → END</span></div>
+            <div class="grid-preview" id="solutionGrid"></div>
+            <p class="route" id="generatedArrows"></p>
+            <pre class="coordinates-output" id="generatedCoordinates"></pre>
+            <a class="secondary button-link hidden" id="downloadSolvedPng" download="solved_level.png">Download solved PNG</a>
+          </div>
+        </section>
+
+        <details class="route-details level-details">
+          <summary>Level details</summary>
+          <div id="difficultyWhy"></div>
+          <div class="metrics details-metrics" id="generatedDetails"></div>
+          <a class="secondary button-link json-download" id="downloadJson" download="one_line_level.json">Download level JSON</a>
+        </details>
+      </section>
+    </section>
+
+    <footer>
+      <p>Solver routes and generated levels are returned only after independent validation. Generator seeds are reproducible within generator version 1.0.</p>
+    </footer>
+  </main>
+
+  <script src="/static/app.js" defer></script>
+  <script src="/static/generator.js" defer></script>
+</body>
+</html>
