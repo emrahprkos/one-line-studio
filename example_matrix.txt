@@ -1,0 +1,5 @@
+# 1/S = tile, 0 = missing. S is the required start.
+S 1 1
+1 1 1
+0 1 1
+

@@ -1,0 +1,5 @@
+services:
+  - type: web
+    name: one-line-solver
+    runtime: docker
+    healthCheckPath: /health
